@@ -1,5 +1,4 @@
 
-
 ### -------- Activation / Conversion ####
 
 ##### ------ Descriptive Table  #######
@@ -458,7 +457,7 @@ ggplot(Data.Het.Info) +
 
 ### -------- Mode accueil voulu / eu #####
 
-# Harmoniser variables baseline et endline pour les matcher
+## Harmoniser variables baseline et endline pour les matcher
 
 # Mode de garde voulu baseline
 
@@ -497,7 +496,8 @@ tab_baseline <- MainDB %>%
   mutate(prop = n / sum(n)) %>%
   ungroup()
 
-#Graphique
+
+#Graphique: Type de mode d'accueil voulu en baseline selon SES
 ggplot(tab_baseline, aes(x = ECSType7_recoded, y = prop, fill = Educ2)) +
   geom_col(position = "dodge") +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
@@ -566,36 +566,60 @@ CrossTab_outcomes <- MainDB %>%
 print(CrossTab_outcomes, n = 30)
 
 
-#Ajouter variables pour régressions
+
+
+###### ------- HET SES ----------
+
+
+#Ajouter variables 
 PostDB <- PostDB %>%
   left_join(MainDB %>% select(ResponseId, got_wanted, got_none_unwanted),
             by = "ResponseId")
 
+PostDBT2 <- PostDBT2 %>%
+  left_join(MainDB %>% select(ResponseId, got_wanted),
+            by = "ResponseId")
 
-# Régression got wanted x SES
-lm_gotwanted <- lm_robust(
-  got_wanted ~ Educ2 * Assignment,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
+
+# ITT
+Het.ITT.GotWanted <- GroupHeterogeneityFnCTRL(
+  DB = PostDB,                 
+  Outcome = "got_wanted",       
+  Heterogeneity = "Educ2",    
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
 )
 
-summary(lm_gotwanted)
-# Comment -> mères low SES dans le groupe de contrôle ont proba de 11.9pp de moins d'avoir le mode d'accueil voulu en baseline, significatif au seuil de 5% (p value = 0,016). 
-#            cela semble ne pas changer dans les groupe traités (interactions non significatives).
 
-
-# Régression got wanted x SES
-lm_got_non <- lm_robust(
-  got_none_unwanted ~ Educ2 * Assignment,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
+# ATT
+Het.ATT.GotWanted <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2,               
+  Outcome = "got_wanted",
+  Heterogeneity = "Educ2",
+  ITT = FALSE,                 
+  Weights = "WeightPS",
+  clusters = "StrataWave"
 )
 
-summary(lm_got_non)
-# Comment -> mères low SES dans le groupe de contrôle ont proba de 14.3pp de plus de ne pas avoir eu de mode d'accueil alors qu'elles en voulaient un, significatif au seuil de 1% (p value = 0,002)
-#.           traitement ne change pas ceci, cohérent car pas d'effet sur l'accès
+
+# ITT par SES
+ITT_by_SES <- Het.ITT.GotWanted$Tidy %>%
+  filter(term == "T2-C") %>%
+  select(Group, estimate, std.error, p.value)
+
+# ATT par SES
+ATT_by_SES <- Het.ATT.GotWanted$Tidy %>%
+  filter(term == "T2-C") %>%
+  select(Group, estimate, std.error, p.value)
+
+print(ITT_by_SES)
+print(ATT_by_SES)
+
+# Commentaire -> le traitement ne semble pas modifier la capacité d’obtenir effectivement le mode souhaité (malgré avoir activé)
+
+
+
 
 
 
@@ -609,18 +633,6 @@ MainDB %>%
     prop_ideal = mean(as.integer(ECSGotIdealECS), na.rm = TRUE)
   )
 
-
-
-# Régression gotideal x SES
-lm_satisfied <- lm_robust(
-  ECSGotIdealECS ~ Educ2 * Assignment,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-
-summary(lm_satisfied)
-# Comment -> pas de différence significative entre SES dans le fait de déclarer avoir le mode idéal en endline
 
 
 
@@ -677,49 +689,6 @@ ggplot(tab_plot, aes(x = got_wanted_ideal_cat, y = share, fill = Educ2)) +
 
 
 
-###### ------- HET SES ----------
-
-Het.ITT.GotWanted <- GroupHeterogeneityFnCTRL(
-  DB = PostDB,                 
-  Outcome = "got_wanted",       
-  Heterogeneity = "Educ2",    
-  ITT = TRUE,
-  Weights = "WeightPS",
-  clusters = "StrataWave"
-)
-
-#Add variable to the dataset
-PostDBT2 <- PostDBT2 %>%
-  left_join(MainDB %>% select(ResponseId, got_wanted),
-            by = "ResponseId")
-
-# ATT
-Het.ATT.GotWanted <- GroupHeterogeneityFnCTRL(
-  DB = PostDBT2,               
-  Outcome = "got_wanted",
-  Heterogeneity = "Educ2",
-  ITT = FALSE,                 
-  Weights = "WeightPS",
-  clusters = "StrataWave"
-)
-
-
-# ITT par SES
-ITT_by_SES <- Het.ITT.GotWanted$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, p.value)
-
-# ATT par SES
-ATT_by_SES <- Het.ATT.GotWanted$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, p.value)
-
-print(ITT_by_SES)
-print(ATT_by_SES)
-
-# Commentaire -> le traitement ne semble pas modifier la capacité d’obtenir effectivement le mode souhaité (malgré avoir activé)
-
-
 ###### ------- HET Migration ---------
 
 # Tableau mode de garde voulu x Migration
@@ -729,7 +698,7 @@ MainDB %>%
     n = n(),
     mean_got_wanted = mean(got_wanted, na.rm = TRUE)
   )
-#Comment -> les mères qui sont nées en France matchent plus souvent (≈ 15 points de plus)
+#Comment -> les mères nées en France matchent plus souvent (≈ 15 points de plus)
 
 
 Het.ITT.GotWanted_M <- GroupHeterogeneityFnCTRL(
@@ -770,7 +739,7 @@ print(ATT_by_migration)
 
 
 
-###### ------ Alluvial plot #########
+###### ------ Alluvial plot  #########
 
 library(ggalluvial)
 
@@ -845,13 +814,13 @@ ggplot(alluvial_controls_agg,
 
 
 
-### ------- Traitement et type de crèche candidatée et eu ######
+### ------- Traitement / type de crèche candidatée et eu ######
 
 # Rappel: Le traitement augmente les candidatures à la crèche pour low SES et mères nées à l'étranger, mais accès semble uniquement augmenter pour les mère issues de l'immigration.
 # Hypothèse : Pourquoi? ceci pourrait renforcer l'hypothèse des critères d'admission, car mères inactives plus présentes chez low SES que chez mères étrangères.
 
 
-## Extraire les coefficients du HET sur Daycare
+## Extraire les coefficients du HET sur Daycare (Il faut run avant les HET sur DayCare qui sont dans MainAnalysis.R)
 
 ## APPLICATIONS
 
@@ -925,7 +894,7 @@ print(combined_use)
 
 
 
-###### ----------- Taux APP x ECS x Bras ---------
+###### ----------- Taux Candidatures et Accès x ECS x Bras ---------
 
 
 ## Candidatures
@@ -1042,6 +1011,7 @@ conv_mig <- table_candidatures_migration %>%
 
 print(conv_SES)
 print(conv_mig)
+# Comment -> hausse de la conversion des mères migrantes drivée par crèches asso et publiques
 
 
 
@@ -1355,7 +1325,6 @@ ATT_FP_MIG <- Het.ATT.Profit.Mig$Tidy %>%
 
 
 
-
 ### ========= Double HET Migration x Activity ===========
 
 Het.ITT.AppCreche.ActiveMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(ActiveBaseline, MigrationBackground)),
@@ -1459,7 +1428,6 @@ Joint significance test of null effect using Chi-2 test and p-value are reported
 
 
 # Export de la table
-
 
 # label for the treatment contrast
 cm <- c('T2-C' = 'Information + Support vs Control')
@@ -1597,49 +1565,6 @@ lm_dept_mig <- lm_robust(
   clusters = StrataWave
 )
 
-summary(lm_dept_mig)
-
-
-# Utilisation Non Profit x Migration
-lm_nonprofit_mig <- lm_robust(
-  Use_nonprofit ~ MigrationBackground * Assignment,
-  data = PostDBT2,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-
-summary(lm_nonprofit_mig)
-
-# Utilisation Profit x Migration
-lm_profit_mig<- lm_robust(
-  Use_profit ~ MigrationBackground * Assignment,
-  data = PostDBT2,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-
-summary(lm_profit_mig)
-
-#Utilisation Non Profit x SES
-lm_nonprofit_ses <- lm_robust(
-  Use_nonprofit ~ Educ2 * Assignment,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-
-summary(lm_nonprofit_ses)
-
-# Utilisation Profit x SES
-lm_profit_ses <- lm_robust(
-  Use_profit ~ Educ2 * Assignment,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-
-summary(lm_profit_ses)
-
 
 
 
@@ -1758,6 +1683,7 @@ p_non
 # Ver cuantas observaciones hay por ciudad (ver si son suficientes)
 
 # Y luego pensar en como podriamos ver el efecto de la politica de la ciudad
+
 
 
 ###### HET SES #####
