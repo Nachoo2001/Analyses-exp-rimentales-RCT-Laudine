@@ -165,7 +165,7 @@ ggplot(Data.Het.Plan)+
   geom_hline(data = Data.Het.Plan %>% filter(panel!="Control group"),
              aes(yintercept = 0), linetype = 2) +
   xlab("") +
-  scale_x_discrete(guide = guide_axis_nested(delim = "!")) +
+  scale_x_discrete(labels = function(x) gsub("!", "\n", x)) +
   scale_fill_brewer("Heterogeneity", palette = "Dark2") +
   scale_color_brewer("Heterogeneity", palette = "Dark2") +
   scale_shape("Heterogeneity") +
@@ -315,7 +315,7 @@ ggplot(Data.Het.Used)+
   geom_hline(data = Data.Het.Used %>% filter(panel!="Control group"),
              aes(yintercept = 0), linetype = 2) +
   xlab("") +
-  scale_x_discrete(guide = guide_axis_nested(delim = "!")) +
+  scale_x_discrete(labels = function(x) gsub("!", "\n", x)) +
   scale_fill_brewer("Heterogeneity", palette = "Dark2") +
   scale_color_brewer("Heterogeneity", palette = "Dark2") +
   scale_shape("Heterogeneity") +
@@ -438,7 +438,7 @@ ggplot(Data.Het.Info) +
   geom_hline(data = Data.Het.Info %>% filter(panel != "Control group"),
              aes(yintercept = 0), linetype = 2) +
   xlab("") +
-  scale_x_discrete(guide = guide_axis_nested(delim = "!")) +
+  scale_x_discrete(labels = function(x) gsub("!", "\n", x)) +
   scale_fill_brewer("Heterogeneity", palette = "Dark2") +
   scale_color_brewer("Heterogeneity", palette = "Dark2") +
   scale_shape("Heterogeneity") +
@@ -626,15 +626,6 @@ print(ATT_by_SES)
 # Maintenant on ajoute la variable "ECSGotIdealECS" dans l'analyse (déclarer en endline avoir le mode d'accueil idéal)
 
 
-MainDB %>%
-  group_by(Assignment, Educ2) %>%
-  summarise(
-    n = n(),
-    prop_ideal = mean(as.integer(ECSGotIdealECS), na.rm = TRUE)
-  )
-
-
-
 
 # Créer variable qui croise "eu le mode voulu" et "avoir le mode de garde idéal"
 MainDB <- MainDB %>%
@@ -817,10 +808,10 @@ ggplot(alluvial_controls_agg,
 ### ------- Traitement / type de crèche candidatée et eu ######
 
 # Rappel: Le traitement augmente les candidatures à la crèche pour low SES et mères nées à l'étranger, mais accès semble uniquement augmenter pour les mère issues de l'immigration.
-# Hypothèse : Pourquoi? ceci pourrait renforcer l'hypothèse des critères d'admission, car mères inactives plus présentes chez low SES que chez mères étrangères.
+# Hypothèse : Pourquoi? ceci pourrait renforcer l'hypothèse des critères d'admission, car mères inactives seraient plus présentes chez low SES que chez mères étrangères.
 
 
-## Extraire les coefficients du HET sur Daycare (Il faut run avant les HET sur DayCare qui sont dans MainAnalysis.R)
+## Extraire les coefficients du HET sur Daycare (Il faut run avant les HET sur DayCare (EstHetT2ITTATT sur le sommaire) qui sont dans MainAnalysesFinal_AH.R)
 
 ## APPLICATIONS
 
@@ -1388,13 +1379,14 @@ Table_profit_SES_Mig
 
 
 
+# So since the positive impact the treatment has on access for migrants seems to be driven from non profit daycare...
 
-# Hypothesis 2: So this could be because inactivity (which could go against admission criteria therefore harming access) is higher among low SES than among migrants.
+# Hypothesis 2: This could be because inactivity (which could go against admission criteria therefore harming access) is higher among low SES than among migrants.
 # So we will see if inactivity rates differ between low SES and migrants.
 
 
 
-### ======= Activity and SES and migration ==========
+### ======= Activity SES and migration ==========
 
 activity_stacked <- bind_rows(
   # Migration
@@ -1750,6 +1742,7 @@ modelsummary(
   hline(c(6,12), part = "body")
 
 
+
 ####  ============ Double HET SES x Coverage    ####
 
 Het.ITT.AppCreche.HighCovSES <- GroupHeterogeneityFnCTRL(
@@ -1880,7 +1873,7 @@ modelsummary(
 
 ####  ============ NEW Double HET Migration x Coverage    ####
 
-# we compute new coverage dummy since we don't know exactly how HighCoverageBaseline was computted
+# we compute new coverage dummy since we don't know exactly how HighCoverageBaseline was computed
 
 # Median of taux de couverture
 cov_median <- median(MainDB$tauxcouv_com, na.rm = TRUE)
