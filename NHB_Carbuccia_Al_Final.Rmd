@@ -1,0 +1,156 @@
+---
+title: "Investigating how administrative burden and information costs affect social inequalities
+  in early childcare access, a randomised controlled trial"
+author: "Manuscript submitted to Nature Human Behaviour"
+bibliography: NHB.bib
+csl: nature.csl
+abstract: |
+  Low socioeconomic status (SES) and immigrant households benefit the most from attending high-quality early childcare, but they often access it the least. This study tests whether cognitive and behavioural barriers contribute to these access gaps in the French context, where disparities in early childcare enrolment are large. Through a multi-arm experiment, we evaluate the effectiveness of informational interventions and personalised support to enhance early childcare application and access in a sample of 1,849 households. Results revealed that the information-only treatment had minimal impact, while adding personalised support to alleviate administrative burdens significantly bridged the SES and migration gaps in early childcare applications. However, despite substantial increases in application rates, we found limited impacts on access rates for low-SES and immigrant households. Our research underscores the need for integrated strategies to promote equal opportunities in early childhood education by identifying key obstacles to early childcare access for these households.
+
+always_allow_html: true
+language:
+  label:
+    fig: 'Figure '
+    tab: 'Table '
+    eq: 'Equation '
+output: 
+    bookdown::word_document2: 
+      reference_docx: FormatRefWordFinal.docx
+      fig_caption: yes
+      toc: no
+    officedown::rdocx_document:
+---
+
+```{r setup, include=FALSE}
+# knitr::opts_chunk$set(echo = FALSE,message=FALSE, warning=FALSE,fig.width = 8,fig.height = 5,fig.pos = "H",device = cairo_pdf #, 
+# #cache.lazy = FALSE)
+# )
+# doc.type <- knitr::opts_knit$get('rmarkdown.pandoc.to')
+
+knitr::opts_chunk$set(
+  echo = FALSE,message=FALSE, warning=FALSE,error = FALSE,
+  cache=FALSE,
+  #asp=1.5,
+  dev = "cairo_pdf",     # ensures vector output & embedded fonts
+  #fig.width = 8.8 / 2.54,  # convert cm to inches (single column)
+  #fig.height = 6 / 2.54,
+  fig.asp = 1,
+ # fig.units = "in",
+  ft.arraystretch=1,  # flextable coef for height of cells
+  dpi = 300,
+  fig.align = "center",
+  #out.width = "100%",      # scale properly in the output doc
+  knitr.graphics.auto_pdf = TRUE
+)
+
+# function to compute the right width
+out2fig = function(out.width, out.width.default = 0.7, fig.width.default = 6) {
+    fig.width.default * out.width / out.width.default 
+}
+
+
+library(pacman)
+p_load(here)
+p_load(officedown)
+```
+
+```{r LoadLibraries, include=FALSE}
+source(here("RScripts","LoadInstallPackagesFinal.R"), local = knitr::knit_global())
+```
+
+```{r LoadData, include=FALSE}
+source(here("RScripts","LoadAllDataFinal.R"), local = knitr::knit_global())
+```
+
+```{r ImportAllFunctions, include=FALSE}
+source(here("RScripts","AllFunctionsFinal.R"), local = knitr::knit_global())
+```
+
+```{r, include=FALSE, cache=FALSE}
+knitr::read_chunk(here("RScripts","MainAnalysesFinal_AH.R"))
+# This file contains all the chunks of codes to be called at the right place in the Rmarkdown document
+```
+
+
+\newpage
+
+# Introduction
+
+```{r Intro, child='Sections/S1_Introduction_Final.Rmd'}
+```
+
+
+# Results Final
+
+```{r Results, child='Sections/S2_Results_Final_AH.Rmd'}
+```
+
+
+
+# Discussion
+
+```{r Discussion, child='Sections/S3_Discussion.Rmd'}
+```
+
+# Methods
+
+```{r Methods, child='Sections/S4_Methods_AH.Rmd'}
+```
+
+
+# Data availability
+
+Data availability This study used primary outcome data collected through surveys. The anonymised data is available for replication on OSF at the following link: <https://osf.io/rh7eb/?view_only=ef7409ac646544eaac946374de134892>.
+
+# Code availability 
+
+The code to replicate this article, including analysis and tables, is publicly available on OSF at the following link: <https://osf.io/rh7eb/?view_only=ef7409ac646544eaac946374de134892>. All analyses were performed using R 4.3.0 and R studio 2023.12.1. \newpage
+
+# Acknowledgments 
+
+L.C. acknowledges the support of the multiple funders of the experiment: the Mustela foundation, the Ardian foundation, the Caisse nationale des allocations familiales (Cnaf), and the Sciences Po Advisory Board. L.C. has also benefited from the support provided by the ANR and the French government under the Investments for the Future program LABEX (ANR-11-LABX-0091, ANR-11-IDEX-0005-02) and the Idex University of Paris (ANR-18-IDEX-0001). The funders had no role in study design, data collection and analysis, decision to publish or preparation of the manuscript. L.C. also acknowledges the support of the numerous research assistants who contributed to data collection and experiment implementation: Manon Archer, Ketsia Azevedo, Mathilde Badulfe, Audrey Bedel, Hassina Benderer, Nihel Ben Taleb, Anne-Cécile Caseau, Salma Chaoui, Nehila Cheikh, Alexander Demars, Laure Deschamps, Clélie Dureau, Axelle Eychenne, Audrey Gachassin, Marte Gautier, Constance Gautier, Himalaya Girard, Mareah Ghriani, Serena Guissani, Elise Lacombe, Anouchka Maigre, Zineb Makine, Charles-Edouard Malphettes, Eva Morin, Lou Moracchini, Thomas Morand, Dauphine Maureau, Soda Mariyame Ndueguene, Jason Patoureaux, Camille Poinsot, Ludivine Rémy, Elisa Angeon-Roger, Elham Sahal, Chiara Tegbe, and Camille Voisin. 
+
+# Author contributions 
+
+L.C., C.B., and C.C. designed the project. L.C. created the content of the intervention, including videos, a website, and support. L.C. secured funding, recruited participants, conducted the data collection of all waves, implemented the experiment, and supervised the team of research assistants. L.C. and A.H. analysed the data. L.C. wrote the first draft of the manuscript. All authors critically reviewed the paper and contributed to its writing and revision.
+
+# Competing interests 
+
+The authors declare no competing financial interests. AH is employed by the Cnaf. While the Cnaf provided partial funding for the RCT, they did not influence the study design, data analysis, interpretation of the results, or the decision to publish. 
+
+# Tables
+
+```{r Tables, child='Sections/NHB_Tables_AH.Rmd'}
+```
+
+# Figures
+
+```{r Figures, child='Sections/NHB_Figures_AH.Rmd'}
+```
+
+
+# Bibliography {.unnumbered}
+
+::: {#refs}
+:::
+
+
+
+# Extended Data {.unnumbered}
+
+## Extended tables
+
+```{r ExtendedTables, child='Sections/NHB_Supplementary_Tables_AH.Rmd'}
+```
+
+
+
+## Extended figures
+
+
+```{r ExtendedFigures, child='Sections/NHB_Supplementary_Figures_AH.Rmd'}
+```
+
+
+<!-- ```{r ExtendedData, child='Sections/S5_ExtendedData.Rmd'} -->
+<!-- ``` -->

@@ -5,9 +5,9 @@
 # --------------------      in early childcare access, a randomised controlled trial       -----------------------------------#
 #                                                   -------------
 #--------------------                    Loading and cleaning all data                     -----------------------------------# 
-#--------------------                          Authors: XX & XX                            -----------------------------------#    
-#--------------------                               Version 1                              -----------------------------------#  
-#--------------------                               June 2024                              -----------------------------------#     
+#--------------------              Authors: Laudine Carbuccia & Arthur Heim                -----------------------------------#    
+#--------------------                               Version Final                          -----------------------------------#  
+#--------------------                               July 2025                              -----------------------------------#     
 #-----------------------------------------------------------------------------------------------------------------------------#
 #-----------------------------------------------------------------------------------------------------------------------------#
 
@@ -25,6 +25,11 @@ MainDB <- read_csv(here("Data","MainDatabase_final.csv")) %>%   mutate(
                        levels=c("Ne sait pas","Aucune","Une minorité","Moitié moitié","La plupart","Toutes"), ordered = TRUE # how many mothers in their surroundings use childcare 
   ), 
   Dep = as.factor(Dep), 
+  Educ2 = case_when(
+    Educ2 == "Bac" ~ "Low-SES",
+    Educ2 == "Sup" ~ "High-SES",
+    TRUE ~ NA_character_
+  ) %>% factor(levels = c("Low-SES","High-SES")),
   FmilyEarnLessThan2500 = as.factor(FmilyEarnLessThan2500), 
   NumberOfChildren3 = as.factor(NumberOfChildren3), 
   NormsOpposedYes = as.factor(NormsOpposedYes),
@@ -35,7 +40,7 @@ MainDB <- read_csv(here("Data","MainDatabase_final.csv")) %>%   mutate(
   TrustCreche=ifelse(TrustCreche1or0 == "Yes","High","Low"),
   BelieveBenefits = as.factor(ifelse(LikertReturnHK1or0 == "Yes", "Believe in  benefits", "Don’t believe")),
   MigrationBackground = ifelse(
-    FrenchYNBaseline == "Abroad", 
+    FrenchYNBaseline == "Else", 
     "Yes", 
     "No"
   ),
@@ -75,8 +80,8 @@ txcouv_pe_com_EAJE_assmat <- read.csv(here("Data", "Spatial data","txcouv_pe_com
 # Note: here they have data on PMI and EAJE in SSD https://data.iledefrance.fr/explore/?sort=modified&refine.theme=Logement+-+sant%C3%A9+-+social
 
 # Import our map at the city level
-#gp_shape <- st_read(file.path(here("Data", "Spatial data", 
-#                                   "RECENSEMENT_COMMUNE_POPULATION.shp")))
+gp_shape <- st_read(file.path(here("Data", "Spatial data", 
+                                   "RECENSEMENT_COMMUNE_POPULATION.shp")))
 
 #---- MainDBPrep ----
 
