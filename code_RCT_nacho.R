@@ -1180,39 +1180,7 @@ print(MIG_summary)
 #.        -> for High SES: treatement seems to switch them from using for profit to non profit 
 
 
-# Hypothesis 2: So this could be because inactivity (which could go against admission criteria therefore harming access) is higher among low SES than among migrants.
-# So we will see if inactivity rates differ between low SES and migrants.
-
-
-
-###### ======= Taux d'activité des mères par SES et migration ==========
-
-activity_stacked <- bind_rows(
-  # Migration
-  MainDB %>%
-    filter(!is.na(MigrationBackground), !is.na(Active)) %>%
-    mutate(group_var = "Migration", group = as.character(MigrationBackground)) %>%
-    count(group_var, group, Active, name = "n") %>%
-    group_by(group_var, group) %>%
-    mutate(pct = round(100 * n / sum(n), 1)) %>%
-    ungroup(),
-  # SES
-  MainDB %>%
-    filter(!is.na(Educ2), !is.na(Active)) %>%
-    mutate(group_var = "SES", group = as.character(Educ2)) %>%
-    count(group_var, group, Active, name = "n") %>%
-    group_by(group_var, group) %>%
-    mutate(pct = round(100 * n / sum(n), 1)) %>%
-    ungroup()
-) %>%
-  arrange(group_var, group, desc(Active))
-
-print(activity_stacked)
-# Comment -> les mères low SES et les mères migrantes semblent avoir le même taux d'inactivité. Donc inactifs pas plus représentés chez low SES que chez les migrants
-
-
-
-### ========= HET on Profit / Non Profit ===============
+#### ========= HET Profit / Non Profit Migration x SES ===============
 
 PostDB <- PostDB %>%
   left_join(
@@ -1277,55 +1245,185 @@ Het.ATT.Profit.Mig <- GroupHeterogeneityFnCTRL(
 )
 
 
-# --- Extract the T2-C row from each object & label it ---
+# ---- Table (same code model as in MainAnalysesFinal_AH)
 
-# ITT
-ITT_NP_SES <- Het.ITT.NonProfit.SES$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "Non-profit", Effect = "ITT", Heterogeneity = "SES", .before = 1)
+cmT2C <- c('T2-C' = 'Information + support vs control')
 
-ITT_NP_MIG <- Het.ITT.NonProfit.Mig$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "Non-profit", Effect = "ITT", Heterogeneity = "Migration background", .before = 1)
+fmt2 <- modelsummary::fmt_statistic(
+  estimate = 2, std.error = 2, conf.int = 2,
+  "Chi 2" = 2, "P-value" = 3, adj.p.value = 3
+)
 
-ITT_FP_SES <- Het.ITT.Profit.SES$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "For-profit", Effect = "ITT", Heterogeneity = "SES", .before = 1)
+# NON-PROFIT (Use)
 
-ITT_FP_MIG <- Het.ITT.Profit.Mig$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "For-profit", Effect = "ITT", Heterogeneity = "Migration background", .before = 1)
+# Avg. control (ModelSummary0): SES + Migration
+StackedControl_NP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ITT.NonProfit.SES$ModelSummary0$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ITT.NonProfit.Mig$ModelSummary0$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ITT.NonProfit.SES$ModelSummary0$glance
+)
+class(StackedControl_NP) <- "modelsummary_list"
 
-# ATT
-ATT_NP_SES <- Het.ATT.NonProfit.SES$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "Non-profit", Effect = "ATT", Heterogeneity = "SES", .before = 1)
+# Conditional ITT (ModelSummary): SES + Migration
+StackedITT_NP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ITT.NonProfit.SES$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ITT.NonProfit.Mig$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ITT.NonProfit.SES$ModelSummary$glance
+)
+class(StackedITT_NP) <- "modelsummary_list"
 
-ATT_NP_MIG <- Het.ATT.NonProfit.Mig$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "Non-profit", Effect = "ATT", Heterogeneity = "Migration background", .before = 1)
+# Conditional ATT (ModelSummary): SES + Migration
+StackedATT_NP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ATT.NonProfit.SES$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ATT.NonProfit.Mig$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ATT.NonProfit.SES$ModelSummary$glance
+)
+class(StackedATT_NP) <- "modelsummary_list"
 
-ATT_FP_SES <- Het.ATT.Profit.SES$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "For-profit", Effect = "ATT", Heterogeneity = "SES", .before = 1)
+# FOR-PROFIT (Use)
 
-ATT_FP_MIG <- Het.ATT.Profit.Mig$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, conf.low, conf.high, p.value) %>%
-  mutate(Outcome = "For-profit", Effect = "ATT", Heterogeneity = "Migration background", .before = 1)
+# Avg. control (ModelSummary0): SES + Migration
+StackedControl_FP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ITT.Profit.SES$ModelSummary0$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ITT.Profit.Mig$ModelSummary0$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ITT.Profit.SES$ModelSummary0$glance
+)
+class(StackedControl_FP) <- "modelsummary_list"
+
+# Conditional ITT (ModelSummary): SES + Migration
+StackedITT_FP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ITT.Profit.SES$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ITT.Profit.Mig$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ITT.Profit.SES$ModelSummary$glance
+)
+class(StackedITT_FP) <- "modelsummary_list"
+
+# Conditional ATT (ModelSummary): SES + Migration
+StackedATT_FP <- list(
+  tidy = dplyr::bind_rows(
+    Het.ATT.Profit.SES$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "SES"),
+    Het.ATT.Profit.Mig$ModelSummary$tidy %>%
+      dplyr::select(-model) %>%
+      dplyr::mutate(Variable = "Migration background")
+  ),
+  glance = Het.ATT.Profit.SES$ModelSummary$glance
+)
+class(StackedATT_FP) <- "modelsummary_list"
+
+
+# ONE TABLE: Non-profit and For-profit (Use outcomes)
+
+TheModelsUse <- list(
+  StackedControl_NP,
+  StackedITT_NP,
+  StackedATT_NP,
+  StackedControl_FP,
+  StackedITT_FP,
+  StackedATT_FP
+)
+
+names(TheModelsUse) <- c(
+  "Use: Non-profit_Avg. control",
+  "Use: Non-profit_Conditional ITT",
+  "Use: Non-profit_Conditional ATT",
+  "Use: For-profit_Avg. control",
+  "Use: For-profit_Conditional ITT",
+  "Use: For-profit_Conditional ATT"
+)
+
+Table_profit_SES_Mig <- modelsummary::modelsummary(
+  TheModelsUse,
+  shape = Variable + Group ~ model,
+  fmt = fmt2,
+  estimate = "{estimate}{stars} ({std.error})",  # ← add stars here
+  statistic = c("p = {p.value}", "conf.int", "adj.p.val. = {adj.p.value}"),
+  stars = c('*' = .10, '**' = .05, '***' = .01), # ← star cutoffs
+  coef_map = cmT2C,
+  gof_map = c("Fixed effects", "nobs", "r.squared", "adj.r.squared"),
+  output = "flextable"
+) |>
+  flextable::theme_booktabs() |>
+  flextable::separate_header(split = "_", opts = "center-hspan") |>
+  flextable::bold(i = 1, part = "header") |>
+  flextable::italic(i = 1, part = "header") |>
+  flextable::merge_v(j = 1:3, part = "body") |>
+  flextable::align(part = "header", align = "center") |>
+  flextable::align(part = "body",   align = "center") |>
+  flextable::width(j = c(4:9), width = 2.3, unit = "cm") |>
+  flextable::width(j = c(1,2,3), width = 2.1, unit = "cm")
+
+Table_profit_SES_Mig
+
+
+
+
+# Hypothesis 2: So this could be because inactivity (which could go against admission criteria therefore harming access) is higher among low SES than among migrants.
+# So we will see if inactivity rates differ between low SES and migrants.
+
+
+
+### ======= Activity and SES and migration ==========
+
+activity_stacked <- bind_rows(
+  # Migration
+  MainDB %>%
+    filter(!is.na(MigrationBackground), !is.na(Active)) %>%
+    mutate(group_var = "Migration", group = as.character(MigrationBackground)) %>%
+    count(group_var, group, Active, name = "n") %>%
+    group_by(group_var, group) %>%
+    mutate(pct = round(100 * n / sum(n), 1)) %>%
+    ungroup(),
+  # SES
+  MainDB %>%
+    filter(!is.na(Educ2), !is.na(Active)) %>%
+    mutate(group_var = "SES", group = as.character(Educ2)) %>%
+    count(group_var, group, Active, name = "n") %>%
+    group_by(group_var, group) %>%
+    mutate(pct = round(100 * n / sum(n), 1)) %>%
+    ungroup()
+) %>%
+  arrange(group_var, group, desc(Active))
+
+print(activity_stacked)
+# Comment -> les mères low SES et les mères migrantes semblent avoir le même taux d'inactivité. Donc inactifs pas plus représentés chez low SES que chez les migrants
 
 
 
 
 
-### ========= Double HET Migration x Activity ===========
+#### ========= Double HET Migration x Activity ============== ####
 
 Het.ITT.AppCreche.ActiveMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(ActiveBaseline, MigrationBackground)),
                                                         Outcome = "AppCreche",
@@ -1485,7 +1583,6 @@ TableMig <-
 
 TableMig
 
-flextable::save_as_docx(TableMig, path = "TableMig.docx")
 
 
 
@@ -1498,7 +1595,7 @@ flextable::save_as_docx(TableMig, path = "TableMig.docx")
 
 
 
-## ==================== Geography and access to daycare =====================
+## ==================== Geography et accès aux crèches =====================
 
 # Hypothesis 3: vu que le traitement ne semble pas avoir un effet différencié selon le taux d'activité, on fait l'hypothèse que
 #            les migrants sont peut être concentrés dans des zones avec un meilleur taux de couverture
@@ -1511,62 +1608,508 @@ MainDB$dept_cat <- factor(
 )
 
 
-# Descriptive Table
+# Descriptive Table:  Share of migrants per department
 
-migrant_dist <- MainDB %>%
-  filter(MigrationBackground == "Yes") %>%
-  count(dept_cat, name = "n_migrants") %>%
-  mutate(
-    pct_of_migrants = n_migrants / sum(n_migrants)
-  ) %>%
-  arrange(desc(pct_of_migrants))
+library(scales)
 
-migrant_dist
-
-
-lowses_dist <- MainDB %>%
-  filter(Educ2 == "Low-SES") %>%
-  count(dept_cat, name = "n_lowses") %>%
-  mutate(
-    pct_of_lowses = n_lowses / sum(n_lowses)
-  ) %>%
-  arrange(desc(pct_of_lowses))
-
-lowses_dist
-
-
-desc_tbl_1 <- MainDB %>%
+migrant_rate_by_dept <- MainDB %>%
+  filter(MigrationBackground %in% c("Yes","No")) %>%        # drop NAs/others
   group_by(dept_cat) %>%
   summarise(
-    n_obs           = n(),
-    n_lowses      = sum(Educ2 == "Low-SES", na.rm = TRUE),
-    share_migrants  = n_lowses / n_obs,
-    mean_TAUXCOUV   = mean(TAUXCOUV_COM, na.rm = TRUE),
+    n              = n(),
+    migrants_n     = sum(MigrationBackground == "Yes"),
+    pct_migrants   = migrants_n / n,
+    TAUXCOUV_DEP   = dplyr::first(na.omit(TAUXCOUV_DEP)),   # assumes constant within dept
     .groups = "drop"
+  ) %>%
+  arrange(desc(pct_migrants))
+
+migrant_rate_by_dept
+#Comment -> Proportion of migrants similar across departments
+
+
+
+
+
+# L'objectif est de voir si l'effet positif du traitement sur l'accès aux crèches pour les mères migrantes est concentré dans les zones à haut taux de couverture
+
+
+#### ========= Double HET Migration x Coverage Rate ============== ####
+
+Het.ITT.AppCreche.HighCovMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(HighCoverageBaseline, MigrationBackground)),
+                                                             Outcome = "AppCreche",
+                                                             Heterogeneity = "ActiveMigrant",
+                                                             ITT = TRUE,
+                                                             Weights = "WeightPS",
+                                                             clusters = "StrataWave")
+
+Het.LATE.AppCreche.HighCovMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(HighCoverageBaseline, MigrationBackground)),
+                                                              Outcome = "AppCreche",
+                                                              Heterogeneity = "ActiveMigrant",
+                                                              ITT = FALSE,
+                                                              Weights = "WeightPS",
+                                                              clusters = "StrataWave")
+
+
+
+Het.ITT.UseCreche.HighCovMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(HighCoverageBaseline, MigrationBackground)),
+                                                             Outcome = "UseCreche",
+                                                             Heterogeneity = "ActiveMigrant",
+                                                             ITT = TRUE,
+                                                             Weights = "WeightPS",
+                                                             clusters = "StrataWave")
+
+Het.LATE.UseCreche.HighCovMigrant <- GroupHeterogeneityFnCTRL(DB = PostDBT2 %>% mutate(ActiveMigrant = interaction(HighCoverageBaseline, MigrationBackground)),
+                                                              Outcome = "UseCreche",
+                                                              Heterogeneity = "ActiveMigrant",
+                                                              ITT = FALSE,
+                                                              Weights = "WeightPS",
+                                                              clusters = "StrataWave")
+
+
+Het.ITT.UseCreche.HighCovMigrant$ModelSummary$tidy <- 
+  Het.ITT.UseCreche.HighCovMigrant$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+Het.ITT.UseCreche.HighCovMigrant$ModelSummary0$tidy <- 
+  Het.ITT.UseCreche.HighCovMigrant$ModelSummary0$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+Het.LATE.UseCreche.HighCovMigrant$ModelSummary$tidy <- 
+  Het.LATE.UseCreche.HighCovMigrant$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+Het.ITT.AppCreche.HighCovMigrant$ModelSummary$tidy <- 
+  Het.ITT.AppCreche.HighCovMigrant$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+Het.ITT.AppCreche.HighCovMigrant$ModelSummary0$tidy <- 
+  Het.ITT.AppCreche.HighCovMigrant$ModelSummary0$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+Het.LATE.AppCreche.HighCovMigrant$ModelSummary$tidy <- 
+  Het.LATE.AppCreche.HighCovMigrant$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "Immigrant"), sep = "\\.")
+
+cm <- c('T2-C' = 'Information + Support vs Control')
+
+tbl_list <- list(
+  "Daycare access_Control mean" = Het.ITT.UseCreche.HighCovMigrant$ModelSummary0,
+  "Daycare access_ITT"          = Het.ITT.UseCreche.HighCovMigrant$ModelSummary,
+  "Daycare access_ATT"          = Het.LATE.UseCreche.HighCovMigrant$ModelSummary
+)
+
+if (exists("Het.ITT.AppCreche.HighCovMigrant")) {
+  tbl_list <- append(list(
+    "Daycare application_Control mean" = Het.ITT.AppCreche.HighCovMigrant$ModelSummary0,
+    "Daycare application_ITT"          = Het.ITT.AppCreche.HighCovMigrant$ModelSummary,
+    "Daycare application_ATT"          = Het.LATE.AppCreche.HighCovMigrant$ModelSummary
+  ), tbl_list, after = 0)
+}
+
+modelsummary(
+  tbl_list,
+  shape = term + Coverage + Immigrant ~ model,
+  fmt = fmt_statistic(estimate = 2, adj.p.value = 3, std.error = 2, conf.int = 2, "Chi 2" = 2, "P-value" = 3),
+  estimate  = '{estimate}{stars} ({std.error})',
+  statistic = c("conf.int", "adj.p.val. = {adj.p.value}"),
+  stars     = c('*' = .1, '**' = .05, '***' = .01),
+  coef_map  = cm,
+  gof_map   = c("Covariates", "Fixed effects", "Mean F-stat 1st stage", "Chi 2", "P-value", "nobs", "r.squared", "adj.r.squared"),
+  title     = if (exists("Het.ITT.AppCreche.HighCovMigrant")) {
+    "Average effects on application and access to daycare by Migration Background and High-coverage area at baseline"
+  } else {
+    "Average effects on access to daycare by Migration Background and High-coverage area at baseline"
+  },
+  notes = paste(
+    "Sources:", SourcesStacked,
+    "\n*= p<.1, **= p<.05, ***= p<.01 based on pointwise p-values.",
+    "\nStandard errors are cluster-heteroskedasticity robust adjusted at the block x wave level.",
+    "\nAdjusted p-values and CIs account for simultaneous inference (Westfall–Young).",
+    "\nJoint significance test (Chi-2) and p-value reported at the bottom."
+  ),
+  output = 'flextable'
+) |>
+  theme_booktabs() |>
+  separate_header(split = "_", opts = c("center-hspan")) |>
+  bold(i = 1, part = "header") |>
+  merge_at(j = 3, part = "header") |>
+  merge_at(j = 2, part = "header") |>
+  merge_at(j = 1, part = "header") |>
+  merge_v(j = 1, part = "body") |>
+  merge_v(j = 2, part = "body") |>
+  merge_v(j = 3, part = "body") |>
+  italic(i = c(1), part = "header") |>
+  italic(j = c(1), part = "body") |>
+  fontsize(size = 9, part = "footer") |>
+  fontsize(size = 10, part = "body") |>
+  align(part = "header", align = "center") |>
+  align(part = "body", align = "center") |>
+  width(j = c(5,6,8,9), width = 2.4, unit = "cm") |>
+  width(j = c(2,3,4,7), width = 2.2, unit = "cm") |>
+  hline(c(6,12), part = "body")
+
+
+####  ============ Double HET SES x Coverage    ####
+
+Het.ITT.AppCreche.HighCovSES <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2 %>% mutate(HighCovSES = interaction(HighCoverageBaseline, Educ2)),
+  Outcome = "AppCreche",
+  Heterogeneity = "HighCovSES",
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+Het.LATE.AppCreche.HighCovSES <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2 %>% mutate(HighCovSES = interaction(HighCoverageBaseline, Educ2)),
+  Outcome = "AppCreche",
+  Heterogeneity = "HighCovSES",
+  ITT = FALSE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+Het.ITT.UseCreche.HighCovSES <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2 %>% mutate(HighCovSES = interaction(HighCoverageBaseline, Educ2)),
+  Outcome = "UseCreche",
+  Heterogeneity = "HighCovSES",
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+Het.LATE.UseCreche.HighCovSES <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2 %>% mutate(HighCovSES = interaction(HighCoverageBaseline, Educ2)),
+  Outcome = "UseCreche",
+  Heterogeneity = "HighCovSES",
+  ITT = FALSE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+# --- Tidy the 'Group' labels (interaction() uses "." as the separator) ---
+
+Het.ITT.UseCreche.HighCovSES$ModelSummary$tidy <-
+  Het.ITT.UseCreche.HighCovSES$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+Het.ITT.UseCreche.HighCovSES$ModelSummary0$tidy <-
+  Het.ITT.UseCreche.HighCovSES$ModelSummary0$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+Het.LATE.UseCreche.HighCovSES$ModelSummary$tidy <-
+  Het.LATE.UseCreche.HighCovSES$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+Het.ITT.AppCreche.HighCovSES$ModelSummary$tidy <-
+  Het.ITT.AppCreche.HighCovSES$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+Het.ITT.AppCreche.HighCovSES$ModelSummary0$tidy <-
+  Het.ITT.AppCreche.HighCovSES$ModelSummary0$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+Het.LATE.AppCreche.HighCovSES$ModelSummary$tidy <-
+  Het.LATE.AppCreche.HighCovSES$ModelSummary$tidy %>%
+  tidyr::separate(Group, into = c("Coverage", "SES"), sep = "\\.")
+
+# --- Labels / coef map ---
+cm <- c('T2-C' = 'Information + Support vs Control')
+
+# --- Build the table ---
+
+tbl_list <- list(
+  "Daycare access_Control mean" = Het.ITT.UseCreche.HighCovSES$ModelSummary0,
+  "Daycare access_ITT"          = Het.ITT.UseCreche.HighCovSES$ModelSummary,
+  "Daycare access_ATT"          = Het.LATE.UseCreche.HighCovSES$ModelSummary
+)
+
+# Prepend Applications block
+tbl_list <- append(list(
+  "Daycare application_Control mean" = Het.ITT.AppCreche.HighCovSES$ModelSummary0,
+  "Daycare application_ITT"          = Het.ITT.AppCreche.HighCovSES$ModelSummary,
+  "Daycare application_ATT"          = Het.LATE.AppCreche.HighCovSES$ModelSummary
+), tbl_list, after = 0)
+
+modelsummary(
+  tbl_list,
+  shape = term + Coverage + SES ~ model,
+  fmt = fmt_statistic(estimate = 2, adj.p.value = 3, std.error = 2, conf.int = 2, "Chi 2" = 2, "P-value" = 3),
+  estimate  = '{estimate}{stars} ({std.error})',
+  statistic = c("conf.int", "adj.p.val. = {adj.p.value}"),
+  stars     = c('*' = .1, '**' = .05, '***' = .01),
+  coef_map  = cm,
+  gof_map   = c("Covariates", "Fixed effects", "Mean F-stat 1st stage", "Chi 2", "P-value", "nobs", "r.squared", "adj.r.squared"),
+  title     = "Average effects on application and access to daycare by SES and High-coverage area at baseline",
+  notes = paste(
+    "Sources:", SourcesStacked,
+    "\n*= p<.1, **= p<.05, ***= p<.01 based on pointwise p-values.",
+    "\nStandard errors are cluster-heteroskedasticity robust adjusted at the block x wave level.",
+    "\nAdjusted p-values and CIs account for simultaneous inference (Westfall–Young).",
+    "\nJoint significance test (Chi-2) and p-value reported at the bottom."
+  ),
+  output = 'flextable'
+) |>
+  theme_booktabs() |>
+  separate_header(split = "_", opts = c("center-hspan")) |>
+  bold(i = 1, part = "header") |>
+  merge_at(j = 3, part = "header") |>
+  merge_at(j = 2, part = "header") |>
+  merge_at(j = 1, part = "header") |>
+  merge_v(j = 1, part = "body") |>
+  merge_v(j = 2, part = "body") |>
+  merge_v(j = 3, part = "body") |>
+  italic(i = c(1), part = "header") |>
+  italic(j = c(1), part = "body") |>
+  fontsize(size = 9, part = "footer") |>
+  fontsize(size = 10, part = "body") |>
+  align(part = "header", align = "center") |>
+  align(part = "body", align = "center") |>
+  width(j = c(5,6,8,9), width = 2.4, unit = "cm") |>
+  width(j = c(2,3,4,7), width = 2.2, unit = "cm") |>
+  hline(c(6,12), part = "body")
+
+
+
+
+
+
+
+
+
+####  ============ NEW Double HET Migration x Coverage    ####
+
+# we compute new coverage dummy since we don't know exactly how HighCoverageBaseline was computted
+
+# Median of taux de couverture
+cov_median <- median(MainDB$tauxcouv_com, na.rm = TRUE)
+
+# Creating dummy 
+MainDB <- MainDB %>%
+  mutate(
+    coverage_dummy = case_when(
+      is.na(tauxcouv_com)           ~ NA_character_,
+      tauxcouv_com >= cov_median    ~ "High", # higher than median
+      TRUE                          ~ "Low"
+    ),
+    coverage_dummy = factor(coverage_dummy, levels = c("Low","High"))
   )
 
-desc_tbl_1
 
-
-# Add variables to PostDB
+# Add the variale to PostDBT2
 PostDBT2 <- PostDBT2 %>%
   left_join(
     MainDB %>%
-      select(ResponseId, dept_cat, Use_nonprofit, Use_profit),
+      select(ResponseId, coverage_dummy),
     by = "ResponseId"
   )
 
 
-# Intéraction Migration x Département
-lm_dept_mig <- lm_robust(
-  UseCreche ~ MigrationBackground * dept_cat,
-  data = PostDBT2,
-  weights = WeightPS,
-  clusters = StrataWave
+
+# Since there are NA for this new variables, we exclude 150 observations because function doesn't handle NA in the interaction
+
+DB_clean <- PostDBT2 %>%
+  filter(!is.na(coverage_dummy), !is.na(MigrationBackground)) %>%
+  mutate(CovMig = interaction(coverage_dummy, MigrationBackground, drop = TRUE))  
+
+
+# 1) ITT & ATT — APPLICATIONS (AppCreche)
+Het.ITT.AppCreche.CovMig <- GroupHeterogeneityFnCTRL(
+  DB = DB_clean,
+  Outcome = "AppCreche",
+  Heterogeneity = "CovMig",
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+Het.ATT.AppCreche.CovMig <- GroupHeterogeneityFnCTRL(
+  DB = DB_clean,
+  Outcome = "AppCreche",
+  Heterogeneity = "CovMig",
+  ITT = FALSE,   # ATT/LATE
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+# 2) ITT & ATT — ACCESS (UseCreche)
+Het.ITT.UseCreche.CovMig <- GroupHeterogeneityFnCTRL(
+  DB = DB_clean,
+  Outcome = "UseCreche",
+  Heterogeneity = "CovMig",
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+Het.ATT.UseCreche.CovMig <- GroupHeterogeneityFnCTRL(
+  DB = DB_clean,
+  Outcome = "UseCreche",
+  Heterogeneity = "CovMig",
+  ITT = FALSE,   # ATT/LATE
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
+
+# 3) Tidy labels (split "High.Yes" into Coverage / Immigrant)
+# interaction() uses "." as separator — escape the dot in regex
+tidy_split <- function(obj){
+  obj$ModelSummary$tidy  <- obj$ModelSummary$tidy  %>% separate(Group, into = c("Coverage","Immigrant"), sep="\\.")
+  if (!is.null(obj$ModelSummary0$tidy)) {
+    obj$ModelSummary0$tidy <- obj$ModelSummary0$tidy %>% separate(Group, into = c("Coverage","Immigrant"), sep="\\.")
+  }
+  obj
+}
+
+Het.ITT.AppCreche.CovMig <- tidy_split(Het.ITT.AppCreche.CovMig)
+Het.ATT.AppCreche.CovMig <- tidy_split(Het.ATT.AppCreche.CovMig)
+Het.ITT.UseCreche.CovMig <- tidy_split(Het.ITT.UseCreche.CovMig)
+Het.ATT.UseCreche.CovMig <- tidy_split(Het.ATT.UseCreche.CovMig)
+
+# Table
+cm <- c('T2-C' = 'Information + Support vs Control')
+
+# --- Build the table ---
+tbl_list <- list(
+  "Daycare access_Control mean" = Het.ITT.UseCreche.CovMig$ModelSummary0,
+  "Daycare access_ITT"          = Het.ITT.UseCreche.CovMig$ModelSummary,
+  "Daycare access_ATT"          = Het.ATT.UseCreche.CovMig$ModelSummary
+)
+
+# Prepend Applications block
+tbl_list <- append(list(
+  "Daycare application_Control mean" = Het.ITT.AppCreche.CovMig$ModelSummary0,
+  "Daycare application_ITT"          = Het.ITT.AppCreche.CovMig$ModelSummary,
+  "Daycare application_ATT"          = Het.ATT.AppCreche.CovMig$ModelSummary
+), tbl_list, after = 0)
+
+modelsummary(
+  tbl_list,
+  shape = term + Coverage + Immigrant ~ model,
+  fmt = fmt_statistic(
+    estimate = 2, adj.p.value = 3, std.error = 2, conf.int = 2,
+    "Chi 2" = 2, "P-value" = 3
+  ),
+  estimate  = '{estimate}{stars} ({std.error})',
+  statistic = c("conf.int", "adj.p.val. = {adj.p.value}"),
+  stars     = c('*' = .1, '**' = .05, '***' = .01),
+  coef_map  = cm,
+  gof_map   = c("Covariates", "Fixed effects", "Mean F-stat 1st stage",
+                "Chi 2", "P-value", "nobs", "r.squared", "adj.r.squared"),
+  title     = "Average effects on application and access to daycare by Migration Background and High-coverage (median split, PostDBT2)",
+  notes     = paste(
+    "Sources:", SourcesStacked,
+    "\n*= p<.1, **= p<.05, ***= p<.01 based on pointwise p-values.",
+    "\nStandard errors are cluster-heteroskedasticity robust adjusted at the block × wave level.",
+    "\nAdjusted p-values and CIs account for simultaneous inference (Westfall–Young).",
+    "\nJoint significance test (Chi-2) and p-value are reported at the bottom."
+  ),
+  output = 'flextable'
+) |>
+  theme_booktabs() |>
+  separate_header(split = "_", opts = c("center-hspan")) |>
+  bold(i = 1, part = "header") |>
+  merge_at(j = 3, part = "header") |>
+  merge_at(j = 2, part = "header") |>
+  merge_at(j = 1, part = "header") |>
+  merge_v(j = 1, part = "body") |>
+  merge_v(j = 2, part = "body") |>
+  merge_v(j = 3, part = "body") |>
+  italic(i = 1, part = "header") |>
+  italic(j = 1, part = "body") |>
+  fontsize(size = 9, part = "footer") |>
+  fontsize(size = 10, part = "body") |>
+  align(part = "header", align = "center") |>
+  align(part = "body", align = "center") |>
+  width(j = c(5,6,8,9), width = 2.4, unit = "cm") |>
+  width(j = c(2,3,4,7), width = 2.2, unit = "cm") |>
+  hline(c(6,12), part = "body")
+
+
+
+
+
+
+
+
+
+
+
+
+
+### ================== Timing and access ECS ####
+
+
+## En premier temps il s'agit de voir l'effet de candidater tôt sur le taux d'accès aux crèches
+
+
+lm_time <- lm_robust(
+  ECSUseYes ~ ECSAppTimingBeforeBirth,
+  data = MainDB,
+)
+print(lm_time)
+# Comment -> le fait d'avoir candidaté avant la naissance augmente les chances de utiliser un mode d'accueil
+
+
+# On regarde maintenant si le traitement a permi de avancer la date de candidature
+
+# turn to numeric to compute HET
+
+PostDB <- PostDB %>%
+  mutate(
+    ECSAppBeforeBirth_01 = case_when(
+      ECSAppTimingBeforeBirth == "Yes" ~ 1L,
+      ECSAppTimingBeforeBirth == "No"  ~ 0L,
+      TRUE                             ~ NA_integer_
+    )
+  )
+
+PostDBT2 <- PostDBT2 %>%
+  mutate(
+    ECSAppBeforeBirth_01 = case_when(
+      ECSAppTimingBeforeBirth == "Yes" ~ 1L,
+      ECSAppTimingBeforeBirth == "No"  ~ 0L,
+      TRUE                             ~ NA_integer_
+    )
+  )
+
+
+## Effect of treatment on timing application with HET SES
+Het.ITT.Timing <- GroupHeterogeneityFnCTRL(
+  DB = PostDB,                 
+  Outcome = "ECSAppBeforeBirth_01",       
+  Heterogeneity = "Educ2",    
+  ITT = TRUE,
+  Weights = "WeightPS",
+  clusters = "StrataWave"
 )
 
 
+# ATT
+Het.ATT.Timing <- GroupHeterogeneityFnCTRL(
+  DB = PostDBT2,               
+  Outcome = "ECSAppBeforeBirth_01",
+  Heterogeneity = "Educ2",
+  ITT = FALSE,                 
+  Weights = "WeightPS",
+  clusters = "StrataWave"
+)
 
+
+# ITT par SES
+ITT_timing_SES <- Het.ITT.Timing$Tidy %>%
+  filter(term == "T2-C") %>%
+  select(Group, estimate, std.error, p.value)
+
+# ATT par SES
+ATT_timing_SES <- Het.ATT.Timing$Tidy %>%
+  filter(term == "T2-C") %>%
+  select(Group, estimate, std.error, p.value)
+
+print(ITT_timing_SES)
+print(ATT_timing_SES)
+# Comment -> Le traitement ne semble pas avoir avancé la date de candidature
 
 
 
@@ -1828,481 +2371,6 @@ print(ATT_results_table)
 
 
 
-##### ------- Traitement et effet sur High SES ######
-
-#Rappel: 1. le traitement augmente l'accès pour les high SES aux crèches spécifiquement, mais pas pour les modes d'accueil en général. 
-#.       2. l'effet positif des crèches est drivé par les crèches associatives
-# Hypothèse: le traitement a fait switch les high SES d'autres modes d'acceuil distincts des crèches (assmat, nounou, etc) vers les crèches.
-
-
-# Table desc taux de candidatures par type de mode d'accueil entre SES et bras de traitement
-table_candidatures_ECS <- PremiersPasWithNonRespondents %>%
-  group_by(Educ2, Assignment) %>%
-  summarise(
-    p_crecheA = mean(AppCrecheA, na.rm = TRUE),
-    p_crechePrivee = mean(AppCrechePrivee, na.rm = TRUE),
-    p_crechepub = mean(AppCrechePub, na.rm = TRUE),
-    p_microcreche = mean(AppMicroCreche, na.rm = TRUE),
-    p_crecheParentale = mean(AppCrecheParentale, na.rm = TRUE),
-    p_familiale = mean(AppCrecheFamiliale, na.rm = TRUE),
-    p_assmat = mean(AppAssMat, na.rm = TRUE),
-    p_nounou = mean(AppNounou, na.rm = TRUE),
-    p_MAM = mean(AppMAM, na.rm = TRUE),
-    p_halte = mean(AppHG, na.rm = TRUE),
-    p_partage = mean(AppPartage, na.rm = TRUE),
-    p_hospitaliere = mean(AppHosp, na.rm = TRUE),
-    p_autre = mean(AppAutre, na.rm = TRUE))
-
-print(table_candidatures_ECS)
-
-
-
-# Table des taux de accès par type de mode d'accueil entre SES et bras de traitement
-
-table_accès_ECS <- PremiersPasWithNonRespondents %>%
-  group_by(Educ2, Assignment) %>%
-  summarise(
-    p_crecheA = mean(UseCrecheA, na.rm = TRUE),
-    p_crechePrivee = mean(UsePrivée, na.rm = TRUE),
-    p_crechepub = mean(UseCrechePub, na.rm = TRUE),
-    p_microcreche = mean(UseMicroCreche, na.rm = TRUE),
-    p_crecheParentale = mean(UseParentale, na.rm = TRUE),
-    p_familiale = mean(UseFamiliale, na.rm = TRUE),
-    p_assmat = mean(UseAssMat, na.rm = TRUE),
-    p_nounou = mean(UseNounou, na.rm = TRUE),
-    p_MAM = mean(UseMAM, na.rm = TRUE),
-    p_halte = mean(UseHG, na.rm = TRUE),
-    p_partage = mean(UsePartage, na.rm = TRUE),
-    p_hospitaliere = mean(UseHosp, na.rm = TRUE),
-    p_autre = mean(UseAutre, na.rm = TRUE))
-print(table_accès_ECS)
-
-
-
-#distinction mode de garde collectif vs individuel
-
-PremiersPasWithNonRespondents <- PremiersPasWithNonRespondents %>%
-  mutate(
-    # --- Candidatures ---
-    AppCollectif = as.numeric(
-      AppCrecheA |
-        AppCrechePub |
-        AppCrechePrivee |
-        AppCrecheParentale |
-        AppCrecheFamiliale |
-        AppMicroCreche |
-        AppHG |
-        AppHosp |
-        AppJE
-    ),
-    AppIndividuel = as.numeric(
-      AppNounou |
-        AppPartage |
-        AppAssMat |
-        AppMAM
-    ),
-    
-    # --- Utilisation ---
-    UseCollectif = as.numeric(
-      UseCrecheA |
-        UseCrechePub |
-        UsePrivée |
-        UseParentale |
-        UseFamiliale |
-        UseMicroCreche |
-        UseHG |
-        UseHosp |
-        UseJE
-    ),
-    UseIndividuel = as.numeric(
-      UseNounou |
-        UsePartage |
-        UseAssMat |
-        UseMAM
-    )
-  )
-
-
-PremiersPasWithNonRespondents %>%
-  group_by(Assignment, Educ2) %>%
-  summarise(
-    a_collectif = mean(AppCollectif, na.rm = TRUE),
-    a_individuel = mean(AppIndividuel, na.rm = TRUE),
-    u_collectif = mean(UseCollectif),
-    u_individuel = mean(UseIndividuel)
-  )
-# Comment -> 
-
-PostDB <- PostDB %>%
-  left_join(PremiersPasWithNonRespondents %>% select(ResponseId, AppCollectif, AppIndividuel, UseCollectif, UseIndividuel),
-            by = "ResponseId")
-
-PostDBT2 <- PostDBT2 %>%
-  left_join(PremiersPasWithNonRespondents %>% select(ResponseId, AppCollectif, AppIndividuel, UseCollectif, UseIndividuel),
-            by = "ResponseId")
-
-
-Het.ITT.UseInd <- GroupHeterogeneityFnCTRL(
-  DB = PostDB,                 
-  Outcome = "UseIndividuel",       
-  Heterogeneity = "Educ2",    
-  ITT = TRUE,
-  Weights = "WeightPS",
-  clusters = "StrataWave"
-)
-
-
-ITT_by_SES <- Het.ITT.UseInd$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, p.value)
-print(ITT_by_SES)
-# Comment -> effet non significatif du traitement sur l'utilisation des modes individuels. 
-
-
-
-table(PremiersPasWithNonRespondents$UseCreche)
-table(PremiersPasWithNonRespondents$UseCrechePub)
-table(PremiersPasWithNonRespondents$UseCrecheA)
-table(PremiersPasWithNonRespondents$UsePrivée)
-table(PremiersPasWithNonRespondents$UseCrecheDept)
-table(PremiersPasWithNonRespondents$UseCrecheMuni)
-
-
-
-df <- PremiersPasWithNonRespondents
-
-# 1) Recompute the union from subtypes and compare to UseCreche
-creche_cols <- c("UseCrecheA","UseCrecheDept", "UseCrecheMuni", "UsePrivée","UseParentale",
-                 "UseFamiliale","UseMicroCreche","UseHosp")  # adjust list to your definition
-
-df_chk <- df %>%
-  mutate(across(all_of(creche_cols), ~replace_na(., 0)),
-         UseCreche_from_subs = as.integer(rowSums(across(all_of(creche_cols))) > 0))
-
-mismatch <- df_chk %>%
-  filter(UseCreche == 0, UseCreche_from_subs == 1)
-
-n_mismatch <- nrow(mismatch)
-n_total <- nrow(df_chk)
-message("Mismatches: ", n_mismatch, " / ", n_total)
-
-# ---- 4) Which subtypes are 'on' in the mismatches? (counts & shares)
-subtype_counts <- mismatch %>%
-  summarise(across(all_of(creche_cols), ~ sum(. == 1, na.rm = TRUE))) %>%
-  pivot_longer(everything(), names_to = "Subtype", values_to = "Count") %>%
-  mutate(Share = Count / n_mismatch) %>%
-  arrange(desc(Count))
-print(subtype_counts)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Nombre total de candidatures par type de mode d'accueil
-
-# On prend le nombre total de candidatures pour chaque ECS et par individu 
-# (une mère peut candidater non seulement pour différents types de ECS, mais aussi pour plusieurs structures du même type)
-PremiersPasWithNonRespondents <- PremiersPasWithNonRespondents %>%
-  mutate(
-    AppNCreche = AppNCrecheHops + AppNCrecheAsso + AppNCrecheParentale +
-      AppNCrecheFamiliale + AppNCrechePrivee + AppNMicroCreche +
-      AppNAutreCreche + AppNCrechePub,
-    AppNAssMat = AppNAssMat + AppNMAM,   
-    AppNHalte = AppNHG,
-    AppNNounouTot = AppNNounou + AppNPartage,
-    AppNAutreTot = AppNJE
-  )
-
-table(MainDB$AppAssMat)
-
-
-#voir type de crèche auxquels les riches ont eu accès
-
-
-# Ajouter variables à la base
-MainDB <- MainDB %>%
-  left_join(PremiersPasWithNonRespondents %>% select(ResponseId, AppNCreche, AppNAssMat, AppNHalte, AppNNounouTot, AppNAutreTot),
-            by = "ResponseId")
-
-
-# remplacer les NA par 0 pour les candidatures
-MainDB <- MainDB %>%
-  mutate(
-    AppNCreche = ifelse(is.na(AppNCreche), 0, AppNCreche),
-    AppNAssMat = ifelse(is.na(AppNAssMat), 0, AppNAssMat),
-    AppNHalte = ifelse(is.na(AppNHalte), 0, AppNHalte),
-    AppNNounouTot = ifelse(is.na(AppNNounouTot), 0, AppNNounouTot),
-    AppNAutreTot = ifelse(is.na(AppNAutreTot), 0, AppNAutreTot)
-  )
-
-
-# table descriptive pour voir n candidatures moyennes par type de ECS voulu
-table_candidatures <- MainDB %>%
-  group_by(Assignment, ECSType7_recoded) %>%
-  summarise(
-    n_familles = n(),
-    mean_app_creche = mean(AppNCreche),
-    total_app_creche = sum(AppNCreche),
-    mean_app_assmat = mean(AppNAssMat),
-    total_app_assmat = sum(AppNAssMat),
-    mean_app_halte = mean(AppNHalte),
-    total_app_halte = sum(AppNHalte),
-    mean_app_nounou = mean(AppNNounouTot),
-    total_app_nounou = sum(AppNNounouTot),
-    mean_app_autre = mean(AppNAutreTot),
-    total_app_autre = sum(AppNAutreTot)
-  )
-print(table_candidatures, n = 25)
-#Comment -> Parmi ceux qui voulaient une crèche, taux de candidature pour ass mat + bas parmi groupes traitement
-#           En T2 taux de app en crèche parmi ceux qui veulent ass mat + élevé que T2 et contrôle
-#.          NA en T2 taux de candidatures en crèche + élevé
-
-
-# tableau
-table_modes_baseline <- MainDB %>%
-  group_by(Assignment, ECSType7_recoded) %>%
-  summarise(
-    n_familles = n(),
-    mean_app_creche = mean(AppCreche, na.rm = TRUE),
-    total_app_creche = sum(AppCreche, na.rm = TRUE),
-    mean_app_crecheA = mean(AppCrecheA, na.rm = TRUE),
-    total_app_crecheA = sum(AppCrecheA, na.rm = TRUE),
-    
-    mean_app_assmat = mean(AppAssMat.y, na.rm = TRUE),
-    total_app_assmat = sum(AppAssMat.y, na.rm = TRUE),
-    
-    mean_app_je = mean(AppJE, na.rm = TRUE),
-    total_app_je = sum(AppJE, na.rm = TRUE),
-    
-    mean_app_autre = mean(AppAutre, na.rm = TRUE),
-    total_app_autre = sum(AppAutre, na.rm = TRUE),
-    
-    mean_app_partage = mean(AppPartage, na.rm = TRUE),
-    total_app_partage = sum(AppPartage, na.rm = TRUE),
-    
-    mean_app_hg = mean(AppHG, na.rm = TRUE),
-    total_app_hg = sum(AppHG, na.rm = TRUE),
-    
-    mean_app_nounou = mean(AppNounou, na.rm = TRUE),
-    total_app_nounou = sum(AppNounou, na.rm = TRUE),
-    
-    mean_app_hosp = mean(AppHosp, na.rm = TRUE),
-    total_app_hosp = sum(AppHosp, na.rm = TRUE),
-    
-    mean_app_parentale = mean(AppParentale, na.rm = TRUE),
-    total_app_parentale = sum(AppParentale, na.rm = TRUE),
-    
-    mean_app_crecheprivee = mean(AppCrechePrivee, na.rm = TRUE),
-    total_app_crecheprivee = sum(AppCrechePrivee, na.rm = TRUE),
-    
-    mean_app_microcreche = mean(AppMicroCreche, na.rm = TRUE),
-    total_app_microcreche = sum(AppMicroCreche, na.rm = TRUE),
-    
-    mean_app_mam = mean(AppMAM, na.rm = TRUE),
-    total_app_mam = sum(AppMAM, na.rm = TRUE),
-    
-    mean_app_crechemuni = mean(AppCrecheMuni, na.rm = TRUE),
-    total_app_crechemuni = sum(AppCrecheMuni, na.rm = TRUE),
-    
-    mean_app_crechedept = mean(AppCrecheDept, na.rm = TRUE),
-    total_app_crechedept = sum(AppCrecheDept, na.rm = TRUE),
-    
-    mean_app_crechepub = mean(AppCrechePub, na.rm = TRUE),
-    total_app_crechepub = sum(AppCrechePub, na.rm = TRUE),
-    
-    mean_app_crecheparentale = mean(AppCrecheParentale, na.rm = TRUE),
-    total_app_crecheparentale = sum(AppCrecheParentale, na.rm = TRUE),
-    
-    mean_app_crechefamiliale = mean(AppCrecheFamiliale, na.rm = TRUE),
-    total_app_crechefamiliale = sum(AppCrecheFamiliale, na.rm = TRUE),
-    
-    mean_app_autrecreche = mean(AppAutreCreche, na.rm = TRUE),
-    total_app_autrecreche = sum(AppAutreCreche, na.rm = TRUE)
-  )
-
-print(table_modes_baseline, n = 50)
-
-
-
-
-# juste goupe de contrôle
-alluvial_controls_app <- MainDB %>%
-  filter(Assignment == "Control")   
-
-
-# Mettre en long pour faire alluvial plot (contrôles uniquement)
-applications_long_ctrl <- alluvial_controls_app %>%
-  select(ResponseId, ECSType7_recoded,
-         AppNCreche, AppNAssMat, AppNHalte, AppNNounouTot, AppNAutreTot) %>%
-  pivot_longer(
-    cols = starts_with("AppN"),
-    names_to = "AppliedType_raw",
-    values_to = "NApplications"
-  ) %>%
-  filter(!is.na(NApplications) & NApplications > 0) %>%
-  mutate(
-    AppliedType = case_when(
-      AppliedType_raw == "AppNCreche" ~ "Crèches",
-      AppliedType_raw == "AppNAssMat" ~ "Assistantes maternelles",
-      AppliedType_raw == "AppNHalte" ~ "Haltes garderies",
-      AppliedType_raw == "AppNNounouTot" ~ "Nounou",
-      AppliedType_raw == "AppNAutreTot" ~ "Autre",
-      TRUE ~ NA_character_
-    )
-  )
-
-
-
-# reformat la base pour des axes + claires sur le graph
-alluvial_app_ctrl_agg <- applications_long_ctrl %>%
-  group_by(ECSType7_recoded, AppliedType) %>%
-  summarise(Freq = sum(NApplications), .groups = "drop")
-print(alluvial_app_ctrl_agg)
-
-
-# afficher les flux sur le graph
-label_data_apps_ctrl <- alluvial_app_ctrl_agg %>%
-  group_by(ECSType7_recoded) %>%
-  mutate(
-    cumFreq = cumsum(Freq),
-    y_label = cumFreq - Freq / 2,
-    x_label = 1.5
-  ) %>%
-  ungroup()
-print(label_data_apps_ctrl)
-
-
-# Graphique
-ggplot(alluvial_app_ctrl_agg,
-       aes(axis1 = ECSType7_recoded,
-           axis2 = AppliedType,
-           y = Freq)) +
-  
-  geom_alluvium(aes(fill = ECSType7_recoded), width = 1/12, alpha = 0.7) +
-  
-  geom_stratum(width = 1/12, fill = "gray95", color = "gray80") +
-  
-  geom_text(
-    stat = "stratum",
-    aes(label = paste(after_stat(stratum), "\n", after_stat(count))),
-    size = 3.5
-  ) +
-  
-  geom_text(
-    data = label_data_apps_ctrl %>% filter(Freq >= 20),  # seuil ajustable
-    aes(x = x_label, y = y_label, label = Freq),
-    size = 3.5,
-    fontface = "bold",
-    color = "black"
-  ) +
-  
-  scale_fill_brewer(type = "qual", palette = "Pastel1") +
-  scale_x_discrete(
-    limits = c("Desired care (Baseline)", "Applied to (Endline)"),
-    expand = c(0.15, 0.15)
-  ) +
-  
-  labs(
-    title = "Applications by type among Control group only",
-    x = "Stage",
-    y = "Number of applications"
-  ) +
-  theme_minimal()
-#Comment -> 
-
-
-
-
-
-
-
-# Voir nombre de types candidatées par bras de traitement et SES
-table(PremiersPasWithNonRespondents$AppNbTypeECS)
-
-PostDB <- PostDB %>%
-  left_join(PremiersPasWithNonRespondents %>% select(ResponseId, AppNbTypeECS),
-            by = "ResponseId")
-
-lm_n_types <- lm_robust(
-  AppNbTypeECS ~ Assignment + Educ2,
-  data = PostDB,
-  weights = WeightPS,
-  clusters = StrataWave
-)
-summary(lm_n_types)
-# Comment -> participants en T2 
-
-
-
-
-
-
-
-
-##### -------- HET Subjective Mismatch (A TERMINER) ---------
-
-
-Het.ITT.ideal <- GroupHeterogeneityFnCTRL(
-  DB = PostDB,                  
-  Outcome = "ECSGotIdealECS",       
-  Heterogeneity = "Educ2",   
-  ITT = TRUE,
-  Weights = "WeightPS",
-  clusters = "StrataWave"
-)
-
-#Ajouter variable dans PostDBT2
-PostDBT2 <- PostDBT2 %>%
-  left_join(MainDB %>% select(ResponseId, ECSGotIdealECS),
-            by = "ResponseId")
-
-Het.ATT.ideal <- GroupHeterogeneityFnCTRL(
-  DB = PostDBT2,                
-  Outcome = "ECSGotIdealECS",
-  Heterogeneity = "Educ2",
-  ITT = FALSE,                
-  Weights = "WeightPS",
-  clusters = "StrataWave"
-)
-
-# ITT par SES
-ITT_ideal <- Het.ITT.ideal$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, p.value)
-
-# ATT par SES
-ATT_ideal <- Het.ATT.ideal$Tidy %>%
-  filter(term == "T2-C") %>%
-  select(Group, estimate, std.error, p.value)
-
-print(ITT_ideal)
-print(ATT_ideal)
-
-#Comment -> Traitement augmente le mismatch subjectif? 
-
 
 
 #### -------------- Satisfaction du Traitement ########
@@ -2413,12 +2481,6 @@ summary(lm_spillover)
 
 #### ------- Effort, Stress et Difficulté déclarée endline ########
 
-
-MainDB <- MainDB %>%
-  left_join(PremiersPasWithNonRespondents %>% select(ResponseId, PsyStress, PsySatisfaction, PsyComplicated, ControlECS, ControlCreche),
-            by = "ResponseId")
-
-
 tableau_psy <- MainDB %>%
   group_by(Assignment, Educ2) %>%
   summarise(
@@ -2436,9 +2498,6 @@ tableau_psy <- MainDB %>%
   ) %>%
   ungroup()
 print(tableau_psy, n = 30)
-
-table(MainDB$ControlECS)
-table(MainDB$ControlCreche, useNA = "ifany")
 
 
 # PsyComplicated = de 0 à 100, à quel point chercher un mode de garde vous a paru compliqué?

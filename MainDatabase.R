@@ -45,22 +45,6 @@ MainDB <- MainDB %>% left_join(BaselineCorrected, by = "ResponseId") %>%
                                    "Yes"), 
     FmilyEarnLessThan2500 = as.factor(FmilyEarnLessThan2500))
 
-MainDB <- MainDB %>%
-  mutate(
-    # Relabel language
-    FrenchYNBaseline = recode(FrenchYNBaseline,
-                              "Else" = "Abroad"),  # "French" reste "French"
-    
-    # Relabel SES
-    Educ2 = recode(Educ2,
-                   "Bac" = "Low-SES",
-                   "Sup" = "High-SES"),
-    
-    # Make High-SES the reference level
-    Educ2 = factor(Educ2, levels = c("High-SES", "Low-SES"))
-  )
-
-
 
 # ===== Endline-derived vars from the trusted base =====
 MainDB <- MainDB %>%
